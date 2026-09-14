@@ -27,9 +27,8 @@ COPY docker-entrypoint.sh /app/
 RUN chmod +x /app/docker-entrypoint.sh
 COPY templates /app/templates
 
-# Expose both HTTP and HTTPS ports
-EXPOSE 80
-EXPOSE 443
+# HTTP only; Caddy terminates TLS on 80/443
+EXPOSE 8080
 
 # Start the server
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

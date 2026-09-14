@@ -1,0 +1,18 @@
+{
+	email {$SSL_CONTACT_EMAIL}
+}
+
+{$HOSTNAME} {
+	request_body {
+		max_size {$MAX_PAYLOAD_UPLOAD_SIZE_MB}MB
+	}
+
+	@private path /admin /admin/* /api /api/*
+	handle @private {
+		respond 404
+	}
+
+	handle {
+		reverse_proxy xsshunterexpress:8080
+	}
+}

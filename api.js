@@ -30,7 +30,7 @@ var sessions_settings_object = {
     activeDuration: 1000 * 60 * 5, // Extend for five minutes if actively used
     cookie: {
         httpOnly: true,
-        secure: true
+        secure: false
     }
 }
 function session_wrapper_function(req, res, next) {
@@ -466,6 +466,8 @@ async function set_up_api_server(app) {
 			result[settings_value_metadata.return_key] = db_record ? formatter_function(db_record.value) : settings_value_metadata.default;
     	});
     	await Promise.all(database_promises);
+
+        result.payload_hostname = process.env.HOSTNAME || '';
 
         res.status(200).json({
             'success': true,

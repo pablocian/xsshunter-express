@@ -1,61 +1,86 @@
-version: "3.9"
+# Shared by Caddy (TLS) and the app (payload URLs). Edit HOSTNAME here once.
+x-public: &public
+  # [REQUIRED] The hostname/domain pointed to
+  # the IP of the server running this service.
+  # SSL will automatically be set up and
+  # renewed with LetsEncrypt.
+  HOSTNAME: your.host.name
+  # Maximum XSS callback payload size
+  # This includes the webpage screenshot, DOM HTML,
+  # page text, and other metadata. Note that if the
+  # payload is above this limit, you won't be notified
+  # of the XSS firing.
+  MAX_PAYLOAD_UPLOAD_SIZE_MB: 50
+
 services:
-  # XSS Hunter Express service
-  xsshunterexpress:
-    build: .
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
     environment:
-      # [REQUIRED] The hostname/domain pointed to 
-      # the IP of the server running this service. 
-      # SSL will automatically be set up and
-      #  renewed with LetsEncrypt.
-      - HOSTNAME=your.host.name
+      <<: *public
       # [REQUIRED] Email for SSL
-      - SSL_CONTACT_EMAIL=YourEmail@gmail.com
-      # Maximum XSS callback payload size
-      # This includes the webpage screenshot, DOM HTML,
-      # page text, and other metadata. Note that if the
-      # payload is above this limit, you won't be notified
-      # of the XSS firing.
-      - MAX_PAYLOAD_UPLOAD_SIZE_MB=50
-      # Whether or not to enable the web control panel
-      # Set to "false" or remove to disable the web UI.
-      # Useful for minimizing attack surface.
-      - CONTROL_PANEL_ENABLED=true
-      # Whether or not to enable email notifications via
-      # SMTP for XSS payload fires.
-      - SMTP_EMAIL_NOTIFICATIONS_ENABLED=true
-      - SMTP_HOST=smtp.gmail.com
-      - SMTP_PORT=465
-      - SMTP_USE_TLS=true
-      - SMTP_USERNAME=YourEmail@gmail.com
-      - SMTP_PASSWORD=YourEmailPassword
-      - SMTP_FROM_EMAIL=YourEmail@gmail.com
-      - SMTP_RECEIVER_EMAIL=YourEmail@gmail.com
-      # THERE IS NO NEED TO MODIFY BELOW THIS LINE
-      # ------------------------------------------
-      # FEEL FREE, BUT KNOW WHAT YOU'RE DOING.
-      # Where XSS screenshots are stored
-      - SCREENSHOTS_DIR=/app/payload-fire-images
-      - DATABASE_NAME=xsshunterexpress
-      - DATABASE_USER=xsshunterexpress
-      - DATABASE_PASSWORD=xsshunterexpress
-      - DATABASE_HOST=postgresdb
-      - NODE_ENV=production
+      SSL_CONTACT_EMAIL: YourEmail@gmail.com
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      # Stores the SSL/TLS certificates and keys
-      # in the "ssldata" directory.
-      # Your certificates are automatically renewed
-      # via LetsEncrypt, no extra work needed!
-      - ./ssldata:/app/greenlock.d
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy-data:/data
+      - ./caddy-config:/config
+    depends_on:
+      xsshunterexpress:
+        condition: service_healthy
+  # XSS Hunter Express service
+  xsshunterexpress:
+    build: .
+    restart: unless-stopped
+    environment:
+      <<: *public
+      # Whether or not to enable the web control panel
+      # Set to "false" or remove to disable the web UI.
+      # Useful for minimizing attack surface.
+      CONTROL_PANEL_ENABLED: true
+      # Whether or not to enable email notifications via
+      # SMTP for XSS payload fires.
+      SMTP_EMAIL_NOTIFICATIONS_ENABLED: true
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 465
+      SMTP_USE_TLS: true
+      SMTP_USERNAME: YourEmail@gmail.com
+      SMTP_PASSWORD: YourEmailPassword
+      SMTP_FROM_EMAIL: YourEmail@gmail.com
+      SMTP_RECEIVER_EMAIL: YourEmail@gmail.com
+      # THERE IS NO NEED TO MODIFY BELOW THIS LINE
+      # ------------------------------------------
+      # FEEL FREE, BUT KNOW WHAT YOU'RE DOING.
+      # HTTP port inside the container. Caddy proxies to this.
+      PORT: 8080
+      # Where XSS screenshots are stored
+      SCREENSHOTS_DIR: /app/payload-fire-images
+      DATABASE_NAME: xsshunterexpress
+      DATABASE_USER: xsshunterexpress
+      DATABASE_PASSWORD: xsshunterexpress
+      DATABASE_HOST: postgresdb
+      NODE_ENV: production
+    ports:
+      # Admin panel + API. Bound to loopback only.
+      # ssh -L 8080:127.0.0.1:8080 user@vps
+      # then open http://127.0.0.1:8080/admin/
+      - "127.0.0.1:8080:8080"
+    volumes:
       # Directory where payload fire images are stored.
       - ./payload-fire-images:/app/payload-fire-images
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     # Comment out if you're using an external SQL
     # server and have commented out the DB section.
     depends_on:
-      - postgresdb
+      postgresdb:
+        condition: service_healthy
   # Postgres server to store injection data (not including
   # screenshots which are stored separately).
   # NOTE: If you're using an external SQL server, you can comment
@@ -65,7 +90,7 @@ services:
   # externally. If you do, be sure to change the password.
   postgresdb:
     image: postgres
-    restart: always
+    restart: unless-stopped
     environment:
       # This is a volume mounted into the container
       # (see the directory ./postgres-db-data)
@@ -77,3 +102,9 @@ services:
       POSTGRES_PASSWORD: xsshunterexpress
     volumes:
       - ./postgres-db-data:/var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U xsshunterexpress -d xsshunterexpress"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s

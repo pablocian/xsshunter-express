@@ -42,8 +42,38 @@ const XSS_PAYLOAD = fs.readFileSync(
 	'utf8'
 );
 
+function probe_id_from_path(urlPath) {
+	const first = urlPath.split('/').filter(Boolean)[0];
+	return first || '';
+}
+
+function is_reserved_probe_path(urlPath) {
+	if (urlPath === '/health') {
+		return true;
+	}
+	if (urlPath.startsWith('/screenshots/')) {
+		return true;
+	}
+	if (urlPath.startsWith('/.well-known/')) {
+		return true;
+	}
+	if (urlPath === '/admin' || urlPath.startsWith('/admin/')) {
+		return true;
+	}
+	if (urlPath === '/api' || urlPath.startsWith('/api/')) {
+		return true;
+	}
+	return false;
+}
+
 var multer = require('multer');
-var upload = multer({ dest: '/tmp/' })
+const max_payload_upload_size_mb = parseInt(process.env.MAX_PAYLOAD_UPLOAD_SIZE_MB || '50', 10);
+var upload = multer({
+	dest: '/tmp/',
+	limits: {
+		fileSize: max_payload_upload_size_mb * 1024 * 1024
+	}
+});
 const SCREENSHOTS_DIR = path.resolve(process.env.SCREENSHOTS_DIR);
 const SCREENSHOT_FILENAME_REGEX = new RegExp(/^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}\.png$/i);
 
@@ -53,21 +83,7 @@ async function get_app_server() {
 	// I have a question for Express:
 	// https://youtu.be/ZtjFsQBuJWw?t=4
 	app.set('case sensitive routing', true);
-
-    // Making 100% sure this works like it should
-    // https://youtu.be/aCbfMkh940Q?t=6
-    app.use(async function(req, res, next) {
-		if(req.path.toLowerCase() === req.path) {
-			next();
-			return
-		}
-
-		res.status(401).json({
-			"success": false,
-			"error": "No.",
-			"code": "WHY_ARE_YOU_SHOUTING"
-		}).end();
-    });
+	app.set('trust proxy', true);
 
 	app.use(bodyParser.json());
 
@@ -205,7 +221,7 @@ async function get_app_server() {
 		var payload_fire_data = {
 			id: payload_fire_id,
 			url: req.body.uri,
-			ip_address: req.connection.remoteAddress.toString(),
+			ip_address: (req.ip || req.connection.remoteAddress).toString(),
 			referer: req.body.referrer,
 			user_agent: req.body['user-agent'],
 			cookies: req.body.cookies,
@@ -321,12 +337,9 @@ async function get_app_server() {
             JSON.stringify(chainload_uri)
         ).replace(
             '[PROBE_ID]',
-            JSON.stringify(req.params.probe_id)
+            JSON.stringify(probe_id_from_path(req.path))
         ));
     };
-
-    // Handler that returns the XSS payload at the base path
-    app.get('/', payload_handler);
 
     /*
 		Enabling the web control panel is 100% optional. This can be
@@ -342,7 +355,17 @@ async function get_app_server() {
         console.log(`[INFO] Control panel NOT enabled. Not serving API or GUI server, only acting as a notification server...`);
     }
 
-    app.get('/:probe_id', payload_handler);
+    app.use((req, res, next) => {
+        if (req.method !== 'GET' && req.method !== 'OPTIONS') {
+            next();
+            return;
+        }
+        if (is_reserved_probe_path(req.path)) {
+            next();
+            return;
+        }
+        return payload_handler(req, res);
+    });
 
     return app;
 }

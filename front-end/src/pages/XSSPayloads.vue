@@ -115,8 +115,13 @@ export default {
         // For debugging
         window.app = this;
 
-        // Base domain
-        this.base_domain = api_request.BASE_DOMAIN;
+        // Payload hostname from the public XSS domain, not the SSH-tunneled admin origin
+        try {
+            const settings_result = await api_request.get_settings();
+            this.base_domain = (settings_result.result && settings_result.result.payload_hostname) || api_request.BASE_DOMAIN;
+        } catch (e) {
+            this.base_domain = api_request.BASE_DOMAIN;
+        }
     },
     beforeDestroy() {}
 };
