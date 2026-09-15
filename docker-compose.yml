@@ -42,7 +42,7 @@ services:
       CONTROL_PANEL_ENABLED: true
       # Whether or not to enable email notifications via
       # SMTP for XSS payload fires.
-      SMTP_EMAIL_NOTIFICATIONS_ENABLED: true
+      SMTP_EMAIL_NOTIFICATIONS_ENABLED: false
       SMTP_HOST: smtp.gmail.com
       SMTP_PORT: 465
       SMTP_USE_TLS: true
