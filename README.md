@@ -3,18 +3,19 @@
 This fork keeps the original XSS Hunter Express behavior below, with the following additions.
 
 * **Caddy reverse proxy for TLS.** Let's Encrypt is handled by Caddy on ports 80/443. Node no longer runs Greenlock and listens on HTTP port 8080 only.
-* **Admin panel is not on the public hostname.** Caddy returns 404 for `/admin` and `/api`. `CONTROL_PANEL_ENABLED` still enables/disables the Node UI/API but the panel is never proxied publicly even when enabled. Open the panel over an SSH tunnel:
+* **Admin panel is not on the public hostname.** Caddy returns 404 for `/admin`, `/api`, and `/screenshots`. `CONTROL_PANEL_ENABLED` still enables/disables the Node UI/API but the panel is never proxied publicly even when enabled. Open the panel over an SSH tunnel:
 
   ```bash
   ssh -L 8080:127.0.0.1:8080 user@vps
   # then visit http://127.0.0.1:8080/admin/
   ```
 
-* **Probe script on all public GET paths.** Any public GET/OPTIONS path serves the XSS probe except `/health`, `/screenshots/:id`, and `/.well-known/` (ACME). The first URL path segment is still the `probe_id` / `injection_key` (for example `/abc123/extra` → `abc123`).
+* **Probe script on all public GET paths.** Any public GET/OPTIONS path serves the XSS probe except `/health`, `/.well-known/` (ACME), `/admin`, `/api`, and `/screenshots`. The first URL path segment is still the `probe_id` / `injection_key` (for example `/abc123/extra` → `abc123`).
 * **`MAX_PAYLOAD_UPLOAD_SIZE_MB` is enforced** by both Caddy (`request_body`) and multer.
 * **Patched Node & public-facing deps:**
   - The server image runs Node 22. The Vue admin UI still builds on Node 12 (`node-sass`).
   - Upgraded express, body-parser, multer, Sequelize, pg, nodemailer.
+* **Screenshots are not public.** Email notifications do not include a screenshot. Fires still store images on disk; view them in the panel.
 
 ## Build & start this fork
 
@@ -28,7 +29,7 @@ Starts `postgresdb` → `xsshunterexpress` → `caddy`; each health-checks the p
 
 * [x] Caddy Proxy, Private Admin, Catch-All Probe
 * [x] Node 22 / multer 2 / Express 4.22 / sequelize 6 / nodemailer upgrades
-* [ ] Moving screenshots off the public host
+* [x] Moving screenshots off the public host
 * [ ] Injection-attempt client
 
 ---

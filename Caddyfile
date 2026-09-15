@@ -7,7 +7,7 @@
 		max_size {$MAX_PAYLOAD_UPLOAD_SIZE_MB}MB
 	}
 
-	@private path /admin /admin/* /api /api/*
+	@private path /admin /admin/* /api /api/* /screenshots /screenshots/*
 	handle @private {
 		respond 404
 	}
