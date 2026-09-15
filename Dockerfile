@@ -1,28 +1,15 @@
-FROM node:12
-
-# Set up directory for the server
-RUN mkdir /app/
-WORKDIR /app/
-
-# Copy front-end over
+# Vue / node-sass 4 still need Node 12. Runtime is Node 22.
+FROM node:12 AS frontend
+WORKDIR /app/front-end
 COPY front-end/ /app/front-end/
-WORKDIR /app/front-end/
-RUN npm install
-RUN npm run-script build
+RUN npm install && npm run-script build
 
-WORKDIR /app/
-COPY package.json /app/
-COPY package-lock.json /app/
+FROM node:22
+WORKDIR /app
+COPY package.json package-lock.json /app/
 RUN npm install
-
-COPY server.js /app/
-COPY probe.js /app/
-COPY constants.js /app/
-COPY notification.js /app/
-COPY database.js /app/
-COPY api.js /app/
-COPY app.js /app/
-COPY utils.js /app/
+COPY --from=frontend /app/front-end/dist /app/front-end/dist
+COPY server.js probe.js constants.js notification.js database.js api.js app.js utils.js /app/
 COPY docker-entrypoint.sh /app/
 RUN chmod +x /app/docker-entrypoint.sh
 COPY templates /app/templates
@@ -30,5 +17,4 @@ COPY templates /app/templates
 # HTTP only; Caddy terminates TLS on 80/443
 EXPOSE 8080
 
-# Start the server
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
