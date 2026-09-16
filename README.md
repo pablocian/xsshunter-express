@@ -16,6 +16,7 @@ This fork keeps the original XSS Hunter Express behavior below, with the followi
   - The server image runs Node 22. The Vue admin UI still builds on Node 12 (`node-sass`).
   - Upgraded express, body-parser, multer, Sequelize, pg, nodemailer.
 * **Screenshots are not public.** Email notifications do not include a screenshot. Fires still store images on disk; view them in the panel.
+* **New env var `CONSOLE_MESSAGE`.** If non-empty, the probe console.log()s this in the victim page. Empty by default, thus no console.log()s unless you set it.
 
 ## Build & start this fork
 
@@ -23,7 +24,7 @@ This fork keeps the original XSS Hunter Express behavior below, with the followi
 docker compose up caddy
 ```
 
-Starts `postgresdb` → `xsshunterexpress` → `caddy`; each health-checks the previous before starting. All three services use `restart: unless-stopped`.
+Starts `postgresdb` → `xsshunterexpress` → `caddy` with health checks. All three services use `restart: unless-stopped`.
 
 ## Roadmap
 

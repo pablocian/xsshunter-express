@@ -50,6 +50,8 @@ services:
       SMTP_PASSWORD: YourEmailPassword
       SMTP_FROM_EMAIL: YourEmail@gmail.com
       SMTP_RECEIVER_EMAIL: YourEmail@gmail.com
+      # Optional. If non-empty, the probe console.log()s this in the victim page.
+      CONSOLE_MESSAGE: ""
       # THERE IS NO NEED TO MODIFY BELOW THIS LINE
       # ------------------------------------------
       # FEEL FREE, BUT KNOW WHAT YOU'RE DOING.

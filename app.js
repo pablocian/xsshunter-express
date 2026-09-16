@@ -325,6 +325,8 @@ async function get_app_server() {
         const pages_to_collect = (db_results[0] === null) ? [] : JSON.parse(db_results[0].value);
         const chainload_uri = (db_results[1] === null) ? '' : db_results[1].value;
 
+        const console_message = (process.env.CONSOLE_MESSAGE || '').trim();
+
         res.send(XSS_PAYLOAD.replace(
             /\[HOST_URL\]/g,
             `https://${process.env.HOSTNAME}`
@@ -337,6 +339,9 @@ async function get_app_server() {
         ).replace(
             '[PROBE_ID]',
             JSON.stringify(probe_id_from_path(req.path))
+        ).replace(
+            '[CONSOLE_MESSAGE_REPLACE_ME]',
+            JSON.stringify(console_message)
         ));
     };
 
